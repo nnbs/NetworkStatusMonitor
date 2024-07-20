@@ -40,7 +40,7 @@ void DoConnect(std::string profile) {
 void DoExport(std::string profile) {
     printf("Do export!!\n");
     char buf[1024];
-    sprintf_s(buf, "netsh wlan export profile %s key=clear folder=%%cd%%", profile.c_str());
+    sprintf_s(buf, "netsh wlan export profile %s folder=%%cd%%", profile.c_str());
     system(buf);
 }
 
