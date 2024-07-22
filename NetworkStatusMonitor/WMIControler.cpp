@@ -34,8 +34,8 @@ WMIControler::WMIControler() {
     {
         std::cout << "Failed to initialize security. Error code = 0x"
             << std::hex << hres << std::endl;
-        CoUninitialize();
-        return;                    // Program has failed.
+        //CoUninitialize();
+        //return;                    // Program has failed.
     }
 #endif
 
@@ -52,7 +52,7 @@ WMIControler::WMIControler() {
         std::cout << "Failed to create IWbemLocator object."
             << " Err code = 0x"
             << std::hex << hres << std::endl;
-        CoUninitialize();
+        //CoUninitialize();
         return;                 // Program has failed.
     }
 
@@ -259,5 +259,81 @@ void WMIControler::CancelExecNotificationQueryAsync(std::string key) {
     pSvc->CancelAsyncCall(item->second.pStubSink);
     item->second.Release();
     m_async_info.erase(item);
+}
+
+
+DWORD ExecNotificationThread(LPVOID lpThreadParameter) {
+    ASyncInfo* pInfo = (ASyncInfo*)lpThreadParameter;
+    IEnumWbemClassObject* pEnumerator = pInfo->pEnumerator;
+    IWbemClassObject* pclsObj = NULL;
+    ULONG uReturn = 0;
+
+    while (pEnumerator)
+    {
+        HRESULT hr = pEnumerator->Next(WBEM_INFINITE, 1,
+            &pclsObj, &uReturn);
+
+        if (0 == uReturn) {
+            Sleep(1000);
+            continue;
+        }
+
+        printf("Get!!\n");
+        pInfo->cb(pclsObj);
+
+        pclsObj->Release();
+    }
+    printf("Exit thread\n");
+    return 0;
+
+}
+
+bool WMIControler::ExecNotificationQuery(std::string key, const wchar_t* WQLCommand, pfn_ASyncHandler cb) {
+    HRESULT hres;
+
+    ASyncInfo info;
+
+    info.pSink = new EventSink;
+    info.pSink->AddRef();
+
+    info.pSink->RegCallback(cb);
+
+
+    hres = CoCreateInstance(CLSID_UnsecuredApartment, NULL,
+        CLSCTX_LOCAL_SERVER, IID_IUnsecuredApartment,
+        (void**)&info.pUnsecApp);
+    info.pUnsecApp->CreateObjectStub(info.pSink, &info.pStubUnk);
+
+
+    info.pStubUnk->QueryInterface(IID_IWbemObjectSink,
+        (void**)&info.pStubSink);
+
+    // The ExecNotificationQueryAsync method will call
+    // The EventQuery::Indicate method when an event occurs
+    IEnumWbemClassObject* pEnumerator = NULL;
+    hres = pSvc->ExecNotificationQuery  (
+        _bstr_t("WQL"),
+        _bstr_t(WQLCommand),
+        WBEM_FLAG_FORWARD_ONLY | WBEM_FLAG_RETURN_IMMEDIATELY,
+        NULL,
+        &pEnumerator);
+
+    // Check for errors.
+    if (FAILED(hres))
+    {
+        return false;
+    }
+
+    info.cb = cb;
+    info.command = WQLCommand;
+    info.pEnumerator = pEnumerator;
+
+    m_async_info[key] = info;
+
+
+    CreateThread(NULL, 0, ExecNotificationThread, &m_async_info[key], 0, NULL);
+
+
+    return true;
 }
 

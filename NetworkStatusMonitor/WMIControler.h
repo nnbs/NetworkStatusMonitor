@@ -17,6 +17,7 @@ typedef struct __ASyncInfo {
     EventSink* pSink = NULL;
     IUnknown* pStubUnk = NULL;
     IWbemObjectSink* pStubSink = NULL;
+    IEnumWbemClassObject* pEnumerator = NULL;
 
     void Release() {
         printf("~__ASyncInfo\n");
@@ -44,6 +45,9 @@ public:
     bool ExecQuery(const wchar_t* WQLCommand, std::vector<std::wstring>queryName, std::list<std::map<std::wstring, std::wstring>>& outObj);
     bool ExecNotificationQueryAsync(std::string key, const wchar_t* WQLCommand, pfn_ASyncHandler cb) ;
     void CancelExecNotificationQueryAsync(std::string key);
+
+    bool ExecNotificationQuery(std::string key, const wchar_t* WQLCommand, pfn_ASyncHandler cb);
+
 private:
     bool m_bInitOK = false;
 

@@ -24,6 +24,9 @@
     <ClCompile Include="EventSink.cpp">
       <Filter>來源檔案</Filter>
     </ClCompile>
+    <ClCompile Include="serviceMain.cpp">
+      <Filter>來源檔案</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="WMIControler.h">
@@ -33,7 +36,7 @@
       <Filter>標頭檔</Filter>
     </ClInclude>
     <ClInclude Include="json.hpp">
-      <Filter>來源檔案</Filter>
+      <Filter>標頭檔</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

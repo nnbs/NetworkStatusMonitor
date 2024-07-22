@@ -129,6 +129,7 @@
   <ItemGroup>
     <ClCompile Include="EventSink.cpp" />
     <ClCompile Include="NetworkStatusMonitor.cpp" />
+    <ClCompile Include="serviceMain.cpp" />
     <ClCompile Include="WMIControler.cpp" />
   </ItemGroup>
   <ItemGroup>
