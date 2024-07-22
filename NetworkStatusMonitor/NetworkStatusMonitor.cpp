@@ -24,10 +24,6 @@ typedef struct __MONITOR_INTERFACE {
 std::vector<MONITOR_INTERFACE> vMonitor;
 
 
-static bool ASyncHandler(IWbemClassObject* pclsObj) {
-    return true;
-}
-
 void DoConnect(std::string profile, bool bAdd) {
     char buf[1024];
 
@@ -93,6 +89,8 @@ WMIControler ROOT_WMI;
 
 void CheckNetworkStatus() {
     WMIControler WMI_CIMv2;
+
+    WMI_CIMv2.ConnectToServer(L"ROOT\\CIMV2");
     std::list<std::map<std::wstring, std::wstring>> outObj;
     WMI_CIMv2.ExecQuery(L"SELECT * FROM Win32_NetworkAdapter", { L"DeviceID",  L"Description", L"NetConnectionStatus" }, outObj);
     printf("List all interface\n");

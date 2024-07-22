@@ -226,6 +226,7 @@ VOID SvcInit(DWORD dwArgc, LPTSTR* lpszArgv)
         if (WaitForSingleObject(ghSvcStopEvent, 1000) == WAIT_TIMEOUT) {
             extern void CheckNetworkStatus();
             CheckNetworkStatus();
+            continue;
         }
         //SvcReportEvent((LPTSTR)L"STOPED: 0");
         ReportSvcStatus(SERVICE_STOPPED, NO_ERROR, 0);
