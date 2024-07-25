@@ -27,6 +27,9 @@
     <ClCompile Include="serviceMain.cpp">
       <Filter>來源檔案</Filter>
     </ClCompile>
+    <ClCompile Include="CWALNController.cpp">
+      <Filter>來源檔案</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="WMIControler.h">
@@ -36,6 +39,9 @@
       <Filter>標頭檔</Filter>
     </ClInclude>
     <ClInclude Include="json.hpp">
+      <Filter>標頭檔</Filter>
+    </ClInclude>
+    <ClInclude Include="CWALNController.h">
       <Filter>標頭檔</Filter>
     </ClInclude>
   </ItemGroup>

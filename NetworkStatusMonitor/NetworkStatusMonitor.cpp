@@ -4,6 +4,7 @@
 
 #include "WMIControler.h"
 #include "json.hpp"
+#include "CWALNController.h"
 
 #include <iostream>
 #include <fstream>
@@ -11,30 +12,46 @@
 #include <locale>
 #include <codecvt>
 #include <psapi.h>
+#include <share.h>
 
 std::string module_path;
 extern VOID SvcReportEvent(LPTSTR szFunction);
 
+
 typedef struct __MONITOR_INTERFACE {
     std::wstring name;
-    std::string profile;
-    bool bFind = false;
+    std::wstring GUIDStr;
+    GUID guid;
+    std::vector<std::string> profiles;
 }MONITOR_INTERFACE, * pMONITOR_INTERFACE;
 
 std::vector<MONITOR_INTERFACE> vMonitor;
 
 
-void DoConnect(std::string profile, bool bAdd) {
-    char buf[1024];
 
-    if (bAdd == true) {
-        sprintf_s(buf, "netsh wlan add profile filename=\"%sWi-Fi-%s.xml\" interface=\"Wi-Fi\"", module_path.c_str(), profile.c_str());
-        printf(buf);
-        system(buf);
+std::shared_ptr<CWALNController> CWALNController::m_instance = NULL;
+
+
+void DoConnect(const MONITOR_INTERFACE &pInterface ) {
+    auto pWLAN = CWALNController::GetInstance();
+    if(pInterface.guid == GUID_NULL) {
+        CLSIDFromString(pInterface.GUIDStr.c_str(), (LPCLSID) &pInterface.guid);
     }
-    sprintf_s(buf, "netsh wlan connect ssid=%s interface=Wi-Fi name=%s", profile.c_str(), profile.c_str());
-    printf(buf);
-    system(buf);
+
+    std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
+
+    for(auto profile : pInterface.profiles) {
+        auto wsProfile = converter.from_bytes(profile);
+        if(pWLAN->DoConnect(&pInterface.guid, wsProfile) == false) {
+            continue;
+        }
+
+        if (pWLAN->WaitConnectComplete() == true) {
+            break;
+        }
+        pWLAN->DoDisconnect(&pInterface.guid);
+    }
+
 }
 
 void DoExport(std::string profile) {
@@ -57,7 +74,7 @@ static bool ASyncNetWorkDisconnectHandler(IWbemClassObject* pclsObj) {
             if (pInfo.name == pVar->bstrVal) {
                 //SvcReportEvent((LPTSTR)L"Get Disconnect");
                 printf("Target interface disconnect: try to reconnect!!\n");
-                DoConnect(pInfo.profile, false);
+                DoConnect(pInfo);
                 return true;
             }
             return false;
@@ -92,23 +109,22 @@ void CheckNetworkStatus() {
 
     WMI_CIMv2.ConnectToServer(L"ROOT\\CIMV2");
     std::list<std::map<std::wstring, std::wstring>> outObj;
-    WMI_CIMv2.ExecQuery(L"SELECT * FROM Win32_NetworkAdapter", { L"DeviceID",  L"Description", L"NetConnectionStatus" }, outObj);
+    WMI_CIMv2.ExecQuery(L"SELECT * FROM Win32_NetworkAdapter", { L"DeviceID",  L"Description", L"NetConnectionStatus", L"GUID"}, outObj);
     printf("List all interface\n");
     for (auto item : outObj) {
         MONITOR_INTERFACE newInterface = {
-            item[L"Description"], "", false,
+            item[L"Description"], L"", {}, {""},
         };
         for (auto& v : vMonitor) {
-            if (v.bFind == true) continue;
             printf("%ws => %ws\n", newInterface.name.c_str(), v.name.c_str());
             if (_wcsicmp(newInterface.name.c_str(), v.name.c_str()) == 0) {
                 printf("Find: %ws\n", newInterface.name.c_str());
                 v.name = newInterface.name;
-                v.bFind = true;
-                printf("NetConnectionStatus: %ws\n", item[L"NetConnectionStatus"].c_str());
+                v.GUIDStr = item[L"GUID"].c_str();
+                printf("NetConnectionStatus: %ws: %ws\n", item[L"NetConnectionStatus"].c_str(), item[L"GUID"].c_str());
                 if (item[L"NetConnectionStatus"].compare(L"2") != 0) {
-                    printf("Init not connect, try connect!!");
-                    DoConnect(v.profile, true);
+                    printf("Init not connect, try connect!!\n");
+                    DoConnect(v);
                 }
             }
         }
@@ -143,8 +159,9 @@ DWORD StartMonitor(LPVOID lpThreadParameter)
     //std::wstring wide = converter.from_bytes(narrow_utf8_source_string);
     vMonitor.push_back({
         converter.from_bytes(j["interface"]),
-        j["profile_name"],
-        false
+        L"",
+        GUID_NULL ,
+        j["profile_name"]
     });
 
 #if 0
