@@ -155,6 +155,7 @@ bool WMIControler::ExecQuery(const wchar_t* WQLCommand, std::vector<std::wstring
         return false;               // Program has failed.
     }
 
+
     // Step 7: -------------------------------------------------
     // Get the data from the query in step 6 -------------------
 
@@ -163,19 +164,26 @@ bool WMIControler::ExecQuery(const wchar_t* WQLCommand, std::vector<std::wstring
 
     while (pEnumerator)
     {
+        pclsObj = NULL;
         HRESULT hr = pEnumerator->Next(WBEM_INFINITE, 1,
             &pclsObj, &uReturn);
 
         if (0 == uReturn) {
+            if (pclsObj) {
+                pclsObj->Release();
+            }
             break;
         }
 
-        VARIANT vtProp;
+
 
         std::map<std::wstring, std::wstring> obj;
-        VariantInit(&vtProp);
+
         wchar_t buf[1024];
         for (auto& item : queryName) {
+            VARIANT vtProp;
+            VariantInit(&vtProp);
+
             hr = pclsObj->Get(item.c_str(), 0, &vtProp, 0, 0);
 
             switch (vtProp.vt) {
@@ -192,7 +200,9 @@ bool WMIControler::ExecQuery(const wchar_t* WQLCommand, std::vector<std::wstring
             default:
                 wsprintf(buf, L"Unhandler type: %d\n", vtProp.vt);
                 obj[item] = buf;
+                break;
             }
+            VariantClear(&vtProp);
         }
 
         outObj.push_back(obj);
@@ -200,10 +210,12 @@ bool WMIControler::ExecQuery(const wchar_t* WQLCommand, std::vector<std::wstring
         // Get the value of the Name property
 
         //std::wcout << " OS Name : " << vtProp.bstrVal << std::endl;
-        VariantClear(&vtProp);
+
 
         pclsObj->Release();
     }
+
+    pEnumerator->Release();
 
     return true;
 }

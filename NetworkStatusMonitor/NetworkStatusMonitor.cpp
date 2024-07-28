@@ -109,7 +109,9 @@ void CheckNetworkStatus() {
 
     WMI_CIMv2.ConnectToServer(L"ROOT\\CIMV2");
     std::list<std::map<std::wstring, std::wstring>> outObj;
+
     WMI_CIMv2.ExecQuery(L"SELECT * FROM Win32_NetworkAdapter", { L"DeviceID",  L"Description", L"NetConnectionStatus", L"GUID"}, outObj);
+
     printf("List all interface\n");
     for (auto item : outObj) {
         MONITOR_INTERFACE newInterface = {
@@ -221,7 +223,10 @@ int StartMonitorWorker(bool bWait) {
     if (bWait == true) {
         hExitEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
         SetConsoleCtrlHandler(HandlerRoutine, true);
-        WaitForSingleObject(hExitEvent, INFINITE);
+
+        while (WaitForSingleObject(hExitEvent, 1000) == WAIT_TIMEOUT) {
+            CheckNetworkStatus();
+        }
 
         CloseHandle(hExitEvent);
     }

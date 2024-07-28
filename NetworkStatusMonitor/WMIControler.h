@@ -21,6 +21,9 @@ typedef struct __ASyncInfo {
 
     void Release() {
         printf("~__ASyncInfo\n");
+        if (pEnumerator) {
+            pEnumerator->Release();
+        }
         if (pUnsecApp) {
             pUnsecApp->Release();
         }
